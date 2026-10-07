@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>La máquina más grande jamás construida</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#1b1a17;--fg:#f4efe4;--mut:#a79f8d;--acc:#f2a33a;--line:#3a372f}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:var(--bg);color:var(--fg);font-family:'Bricolage Grotesque',system-ui,sans-serif;overflow:hidden}
+.slide{display:none;height:100%;padding:6vmin 8vmin;flex-direction:column;justify-content:center;gap:3vmin}
+.slide.on{display:flex}
+h1{font-size:8vmin;font-weight:800;line-height:1.05;max-width:20ch}
+h2{font-size:5.6vmin;font-weight:800;line-height:1.1}
+p,li{font-size:3.4vmin;color:var(--mut);line-height:1.35}
+.big{font-size:22vmin;font-weight:800;color:var(--acc);line-height:1}
+.acc{color:var(--acc)}
+.floors{display:flex;flex-direction:column;gap:1vmin;width:min(70vmin,100%)}
+.floors div{background:#26241f;border-left:1.2vmin solid var(--acc);padding:1.1vmin 2vmin;font-size:2.8vmin}
+.floors div:nth-child(odd){background:#2e2b24}
+.row{display:flex;gap:3vmin;flex-wrap:wrap}
+.card{flex:1;min-width:24vmin;border:.3vmin solid var(--line);padding:2.5vmin;border-radius:1.2vmin}
+.card b{display:block;font-size:6vmin;color:var(--acc);line-height:1.1}
+.card span{font-size:2.6vmin;color:var(--mut)}
+.bar{height:3.6vmin;border-radius:.8vmin;background:var(--acc);margin:1vmin 0}
+.bar.s{background:#6d675a}
+.tl{display:flex;gap:2vmin}
+.tl div{flex:1;border-top:1vmin solid var(--acc);padding-top:1.6vmin}
+.tl b{font-size:3.6vmin;display:block}
+.tl span{font-size:2.6vmin;color:var(--mut)}
+.res{font-size:3vmin;color:var(--fg)}
+/* admin */
+#admin{display:none;height:100%;padding:5vmin 6vmin;flex-direction:column;gap:2.4vmin;overflow:auto;font-size:18px}
+#admin h2{font-size:22px}#admin p{font-size:16px}
+#admin input,#admin button{font:inherit;padding:14px;border-radius:10px;border:1px solid var(--line);background:#26241f;color:var(--fg)}
+#admin .nav{display:flex;gap:12px}
+#admin .nav button{flex:1;font-size:26px;padding:22px;background:var(--acc);color:#1b1a17;font-weight:800;border:0}
+#admin .nav button.sec{background:#3a372f;color:var(--fg)}
+#admin .jump{display:flex;gap:8px;flex-wrap:wrap}
+#admin .jump button{min-width:48px}
+#admin .jump button.cur{background:var(--acc);color:#1b1a17}
+#cue{padding:14px;border:1px solid var(--line);border-radius:10px;color:var(--fg)}
+#st{position:fixed;right:10px;bottom:8px;font-size:12px;color:var(--mut)}
+</style>
+</head>
+<body>
+<div id="deck">
+  <section class="slide"><div class="big">3 s</div><h1>¿Qué activas en 3 segundos?</h1><p>Una pregunta a la IA. Una cadena que cruza medio planeta.</p></section>
+
+  <section class="slide"><h1>No es una nube. Es una máquina de 7 pisos.</h1>
+    <div class="floors"><div>1 · Modelo</div><div>2 · Chip</div><div>3 · Fábrica</div><div>4 · La máquina que fabrica las máquinas</div><div>5 · Memoria</div><div>6 · Centro de datos</div><div>7 · Mundo físico: energía, cobre, agua, personas</div></div></section>
+
+  <section class="slide"><h2>La obra más grande de la historia</h2>
+    <div class="row"><div class="card"><b>785 mil M USD</b><span>inversión de las 3 grandes tecnológicas este año</span></div>
+    <div class="card"><b>2,5 % vs 1,5 %</b><span>de la economía de EE. UU.: IA frente al boom de internet</span></div>
+    <div class="card"><b>~90 %</b><span>de los chips avanzados, en una sola isla</span></div></div>
+    <p>Frenos: energía · memoria · materiales · personas. Ponen precio, no detienen.</p></section>
+
+  <section class="slide"><h1>Nokia tenía todo.<br><span class="acc">Reaccionó tarde.</span></h1>
+    <div class="row"><div class="card"><b>Antes</b><span>Líder mundial de móviles: marca, recursos y talento</span></div>
+    <div class="card"><b>Después</b><span>Perdió el liderazgo y vendió su negocio de móviles (2013)</span></div></div>
+    <p>No fue el tamaño. Fue adaptarse a tiempo.</p></section>
+
+  <section class="slide"><h1>Mismo problema.<br><span class="acc">Distinto método.</span></h1>
+    <div><p>Ingeniero A · IA sin método</p><div class="bar s" style="width:90%"></div>
+    <p>Ingeniero B · IA con método</p><div class="bar" style="width:45%"></div></div>
+    <h2>¿Cuál queremos que sea nuestro equipo?</h2></section>
+
+  <section class="slide"><h2>Piloto de 90 días</h2>
+    <div class="tl"><div><b>Días 1–15</b><span>Base y formación: medir tiempos, uso seguro</span></div>
+    <div><b>Días 16–60</b><span>Práctica guiada: tareas reales, biblioteca de prompts</span></div>
+    <div><b>Días 61–90</b><span>Medición y decisión: escalar, ajustar o detener</span></div></div>
+    <p class="res">Resultados esperados: menos tiempo en tareas repetitivas · mejor calidad · menos errores · equipo con confianza</p></section>
+
+  <section class="slide"><h1>Autoricen el piloto de <span class="acc">90 días</span>.</h1>
+    <p>Decidimos en el día 90, con resultados medidos.</p>
+    <h2>La IA llegó para quedarse. Elijamos aprender.</h2></section>
+</div>
+
+<div id="admin">
+  <h2>Control remoto</h2>
+  <p id="title"></p>
+  <div id="cue"></div>
+  <div class="nav"><button class="sec" id="prev">◀ Anterior</button><button id="next">Siguiente ▶</button></div>
+  <div class="jump" id="jump"></div>
+  <input id="pin" type="password" placeholder="PIN de administrador" autocomplete="off">
+</div>
+<div id="st"></div>
+
+<script>
+/* ===== CONFIGURACIÓN: pega aquí los datos de tu proyecto Supabase ===== */
+const SUPABASE_URL = 'https://TU-PROYECTO.supabase.co';
+const SUPABASE_ANON_KEY = 'TU-ANON-KEY';
+/* ===================================================================== */
+
+const TITLES = ['Portada: 3 segundos','La máquina de 7 pisos','La magnitud','Nokia','Dos ingenieros','El piloto de 90 días','Llamado a la acción'];
+const CUES = [
+  'Pregunta de 3 segundos. "No es magia en la nube."',
+  'Viaje de la pregunta: Chile, Holanda, Taiwán, Texas.',
+  'Tres cifras y los 4 frenos en una frase.',
+  'Nokia: no le faltó tamaño, le faltó adaptarse a tiempo.',
+  'Dos ingenieros. Pausa. "¿Cuál queremos que sea nuestro equipo?"',
+  'Tres fases y resultados esperados.',
+  'Petición concreta y frase final.'
+];
+const slides = [...document.querySelectorAll('.slide')];
+const N = slides.length;
+const isAdmin = new URLSearchParams(location.search).has('admin');
+const configured = !SUPABASE_URL.includes('TU-PROYECTO');
+const forceLocal = new URLSearchParams(location.search).has('local') || !configured;
+let cur = 1, sb = null;
+const st = document.getElementById('st');
+
+function show(n){
+  cur = Math.max(1, Math.min(N, n));
+  slides.forEach((s,i)=>s.classList.toggle('on', i===cur-1));
+  if(isAdmin) renderAdmin();
+}
+function renderAdmin(){
+  document.getElementById('title').textContent = `Lámina ${cur} de ${N}: ${TITLES[cur-1]}`;
+  document.getElementById('cue').textContent = CUES[cur-1];
+  document.querySelectorAll('#jump button').forEach((b,i)=>b.classList.toggle('cur', i===cur-1));
+}
+async function setRemote(n){
+  n = Math.max(1, Math.min(N, n));
+  if(forceLocal){ show(n); return; }
+  const pin = document.getElementById('pin').value;
+  const { error } = await sb.rpc('set_slide', { p_pin: pin, p_slide: n });
+  st.textContent = error ? 'Error: ' + error.message : '';
+}
+async function fetchCurrent(){
+  const { data } = await sb.from('slideshow_state').select('current_slide').eq('id',1).single();
+  if(data) show(data.current_slide);
+}
+
+if(isAdmin){
+  document.getElementById('deck').style.display='none';
+  document.getElementById('admin').style.display='flex';
+  const j = document.getElementById('jump');
+  for(let i=1;i<=N;i++){ const b=document.createElement('button'); b.textContent=i; b.onclick=()=>setRemote(i); j.appendChild(b); }
+  document.getElementById('next').onclick=()=>setRemote(cur+1);
+  document.getElementById('prev').onclick=()=>setRemote(cur-1);
+}
+
+if(forceLocal){
+  st.textContent = configured ? 'Modo local' : 'Modo local (falta configurar Supabase)';
+  addEventListener('keydown', e=>{
+    if(e.key==='ArrowRight'||e.key===' ') show(cur+1);
+    if(e.key==='ArrowLeft') show(cur-1);
+  });
+  show(1);
+} else {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  show(1);
+  fetchCurrent();
+  sb.channel('slides')
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'slideshow_state' }, p => show(p.new.current_slide))
+    .subscribe(s => {
+      st.textContent = s === 'SUBSCRIBED' ? '● en vivo' : '○ reconectando…';
+      if(s === 'SUBSCRIBED') fetchCurrent();
+    });
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) fetchCurrent(); });
+}
+</script>
+</body>
+</html>
