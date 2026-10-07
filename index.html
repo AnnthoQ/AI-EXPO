@@ -82,6 +82,20 @@ p,li{font-size:3.4vmin;color:var(--mut);line-height:1.35}
 #err{color:#ff8a7a;min-height:1.2em}
 @media (max-width:640px){.tl{flex-direction:column}}
 @media (prefers-reduced-motion:reduce){.more,.floors>div{transition:none}}
+#clock{display:flex;gap:10px;align-items:center}
+#tm{font-size:34px;font-weight:800;flex:1;color:var(--acc);font-variant-numeric:tabular-nums}
+#tm.over{color:#ff8a7a}
+#tgt{color:var(--mut)}
+#say{display:flex;flex-direction:column;gap:12px;font-size:21px;line-height:1.5;color:var(--fg)}
+#say .tag{font-size:14px;color:var(--acc);font-weight:800}
+#say p{font-size:21px;color:var(--fg);line-height:1.5}
+#say .note{color:var(--acc);font-style:italic}
+#say button{padding:6px 12px;margin-right:6px;font-size:16px;background:#3a372f;color:var(--fg);border:1px solid var(--acc);border-radius:8px}
+#say button.on{background:var(--acc);color:#1b1a17;font-weight:800}
+#qa{border:1px solid var(--line);border-radius:10px;padding:12px}
+#qa summary{cursor:pointer;font-weight:800}
+#qa p{font-size:16px;margin-top:10px;color:var(--fg)}
+#qa p b{color:var(--acc)}
 </style>
 </head>
 <body>
@@ -133,17 +147,17 @@ p,li{font-size:3.4vmin;color:var(--mut);line-height:1.35}
     <h2>¿Cuál queremos que sea nuestro equipo?</h2></section>
 
   <!-- 6 -->
-  <section class="slide"><h2>Piloto de 90 días</h2>
+  <section class="slide"><h2>Piloto de 90 días: tres pasos simples</h2>
     <div class="tl">
-      <div data-g="6" data-i="0"><b>Días 1–15</b><span>Base y formación: medir tiempos, uso seguro</span><div class="more">Línea base por tarea: tiempo, defectos y retrabajo. Política de datos: qué información puede y cuál no puede entrar a la IA. Taller de formación para todo el equipo.</div></div>
-      <div data-g="6" data-i="1"><b>Días 16–60</b><span>Práctica guiada: tareas reales, biblioteca de prompts</span><div class="more">Tareas reales con revisión humana obligatoria. Biblioteca de prompts compartida y versionada. Revisión semanal de qué funcionó y qué no.</div></div>
-      <div data-g="6" data-i="2"><b>Días 61–90</b><span>Medición y decisión: escalar, ajustar o detener</span><div class="more">Comparación contra la línea base en tiempo, calidad y errores. Informe final con una recomendación: escalar, ajustar o detener.</div></div>
+      <div data-g="6" data-i="0"><b>Días 1–15 · Medir y aprender</b><span>Vemos cómo trabajamos hoy y aprendemos a usar la IA con cuidado.</span><div class="more">Anotamos cuánto tarda cada tarea y cuántos errores tenemos hoy, para poder comparar después. Acordamos reglas simples: qué información nunca se comparte con la IA. Y hacemos una capacitación corta para todos.</div></div>
+      <div data-g="6" data-i="1"><b>Días 16–60 · Practicar con trabajo real</b><span>Usamos la IA en tareas de verdad, con una persona que revisa.</span><div class="more">La IA ayuda en el trabajo diario, pero una persona siempre revisa el resultado. Guardamos en una lista compartida las instrucciones (prompts) que mejor funcionan. Cada semana conversamos qué funcionó y qué no.</div></div>
+      <div data-g="6" data-i="2"><b>Días 61–90 · Comparar y decidir</b><span>Comparamos el antes y el después, y decidimos con números.</span><div class="more">Ponemos lado a lado los números del inicio y del final: tiempo, calidad y errores. Con eso decidimos juntos: seguir y ampliar, ajustar o parar.</div></div>
     </div>
-    <p class="res">Resultados esperados: menos tiempo en tareas repetitivas · mejor calidad · menos errores · equipo con confianza</p></section>
+    <p class="res">Resultados esperados: menos tiempo en tareas repetitivas · mejor calidad · menos errores · equipo con más confianza</p></section>
 
   <!-- 7 -->
   <section class="slide"><h1>Autoricen hoy el piloto de <span class="acc">90 días</span>.</h1>
-    <p>Al día 90 decidimos con resultados medidos: escalar o detener.</p>
+    <p>Meta: bajar al menos 30 % el tiempo en tareas repetitivas. Al día 90 decidimos con datos: ampliar o detener.</p>
     <h2>La IA llegó para quedarse. Elijamos aprender.</h2></section>
 </div>
 
@@ -161,10 +175,14 @@ p,li{font-size:3.4vmin;color:var(--mut);line-height:1.35}
 <div id="admin">
   <h2>Control remoto</h2>
   <p id="title"></p>
-  <div id="cue"></div>
+  <div id="clock"><span id="tm">0:00 / 5:00</span><button id="tbtn">▶ Iniciar</button><button id="trst">↺</button></div>
+  <p id="tgt"></p>
   <div class="nav"><button class="sec" id="prev">◀ Anterior</button><button id="next">Siguiente ▶</button></div>
   <div class="jump" id="jump"></div>
+  <div id="cue"></div>
+  <div id="say"></div>
   <div id="ctl"></div>
+  <details id="qa"><summary>Preguntas probables del comité</summary><div id="qabody"></div></details>
 </div>
 <div id="st"></div>
 
@@ -175,14 +193,57 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 /* ======================================================== */
 
 const TITLES = ['Portada: propuesta','La máquina de 7 pisos','La magnitud','Nokia','Dos ingenieros','El piloto de 90 días','Llamado a la acción'];
-const CUES = [
-  'Abrir directo: "Queremos 90 días para pasar de semanas a días."',
-  'Viaje de la pregunta: Chile, Holanda, Taiwán, Texas. Abre un piso a la vez.',
-  'Tres cifras y los 4 frenos en una frase. Despliega cada cifra.',
-  'Nokia: no le faltó tamaño, le faltó adaptarse a tiempo.',
-  'Dos ingenieros, mismo problema. Pausa. "¿Cuál queremos que sea nuestro equipo?"',
-  'Tres fases y resultados esperados. Despliega cada fase.',
-  'Petición concreta y frase final.'
+/* Guía de exposición (5:00). t = segundos objetivo de la lámina.
+   [[grupo:índice|texto]] = botón para desplegar; ((texto)) = indicación escénica */
+const GUIDE = [
+ {t:30, r:'Ethos', m:'Decir la meta sin rodeos. Voz firme, mirar al comité, no leer la pantalla.',
+  say:['Buenas tardes. Vengo a pedirles algo concreto: 90 días.',
+       'Noventa días para que nuestro equipo resuelva en días lo que hoy le toma semanas.',
+       'En los próximos cinco minutos quiero que decidan si vale la pena.']},
+ {t:40, r:'Logos', m:'La IA no es magia: es una máquina física y mundial. Abre solo el piso 4.',
+  say:['Cuando le hacemos una pregunta a la IA, parece magia. No lo es.',
+       'Detrás hay una máquina de siete pisos: el modelo, el chip, la fábrica, la máquina que fabrica las máquinas, la memoria, el centro de datos y, abajo de todo, la energía, el cobre, el agua y las personas.',
+       '[[2:3|Abrir piso 4]] Les doy un ejemplo: las máquinas que imprimen los chips más avanzados las fabrica una sola empresa, en los Países Bajos.',
+       'Una simple pregunta activa toda esta cadena en segundos.']},
+ {t:40, r:'Logos', m:'Tres cifras y los frenos en una frase. Despliega las tres tarjetas, una por una.',
+  say:['Y esta máquina se está construyendo ahora mismo.',
+       '[[3:0|Abrir 785 mil M USD]] Las tres grandes tecnológicas invierten este año unos 785 mil millones de dólares.',
+       '[[3:1|Abrir 2,5 % vs 1,5 %]] La IA ya pesa en la economía de EE. UU. más que lo que pesó el boom de internet.',
+       '[[3:2|Abrir ~90 %]] Y casi todos los chips avanzados salen de una sola isla.',
+       'Hay frenos: energía, memoria, materiales y personas. Pero esos frenos ponen precio, no detienen la obra.']},
+ {t:35, r:'Pathos', m:'Nokia: no le faltó tamaño, le faltó adaptarse a tiempo. Tono más grave.',
+  say:['Ahora, una historia. Nokia.',
+       'Líder mundial de teléfonos móviles. Tenía marca, dinero y talento.',
+       'Perdió el liderazgo y, en 2013, vendió su negocio de móviles.',
+       '¿Le faltó tamaño? No. Le faltó adaptarse a tiempo.',
+       '((pausa corta))',
+       'Eso es lo que nos puede pasar si esperamos.']},
+ {t:55, r:'Pathos + Logos', m:'Clímax: mismo problema, distinto método. Hacer 3 segundos de pausa antes de la pregunta.',
+  say:['Imaginen a dos ingenieros de TI. Les dan el mismo problema: ordenar un inventario y procesar muchísimos datos. Es un escenario para ilustrar.',
+       'El ingeniero A casi no usa la IA: la aprovecha al 10 %. Tarda de dos a tres semanas.',
+       'El ingeniero B la usa con método: la aprovecha al 80 %. Resuelve en cinco a diez días.',
+       'Mismo problema. Mismo talento. Cambia el método.',
+       '((pausa de 3 segundos mirando al comité))',
+       'Entonces, la pregunta es: ¿cuál queremos que sea nuestro equipo?']},
+ {t:55, r:'Ethos + Logos', m:'Bajar la tensión: es un paso pequeño, medible y con salida. Abre cada fase al nombrarla.',
+  say:['No les pido cambiar todo. Les pido 90 días, en tres pasos simples.',
+       '[[6:0|Abrir Días 1–15]] Primero, medir y aprender: anotamos cuánto tardamos hoy y acordamos reglas para usar la IA con cuidado.',
+       '[[6:1|Abrir Días 16–60]] Segundo, practicar con trabajo real: usamos la IA en tareas de verdad, siempre con una persona que revisa.',
+       '[[6:2|Abrir Días 61–90]] Tercero, comparar y decidir: miramos el antes y el después en tiempo, calidad y errores.',
+       'Si los números lo respaldan, ampliamos. Si no, lo detenemos. Esperamos menos tiempo en tareas repetitivas, mejor calidad, menos errores y un equipo con más confianza.']},
+ {t:35, r:'Ethos', m:'Petición concreta con meta medible. Terminar con la frase final y agradecer.',
+  say:['Mi petición es concreta: autoricen hoy el piloto de 90 días.',
+       'Nuestra meta es bajar al menos 30 % el tiempo en tareas repetitivas, sin perder calidad. En el día 90 decidimos juntos, con datos.',
+       'El riesgo es pequeño y la salida está clara.',
+       '((pausa))',
+       'La IA llegó para quedarse. Elijamos aprender. Gracias.']}
+];
+const QA = [
+ ['¿Es una moda?','La inversión mundial y el peso en la economía muestran lo contrario. Y el piloto no apuesta por la moda: apuesta por medir.'],
+ ['¿Cuánto cuesta?','Es un costo acotado y definido de antemano: herramientas y horas de capacitación, con un equipo pequeño. No hay compromiso más allá de los 90 días.'],
+ ['¿Y si sale mal?','Lo detenemos en el día 90 con datos en la mano. Además, siempre habrá una persona revisando el trabajo de la IA.'],
+ ['¿Cómo sabremos que funcionó?','Medimos al inicio y al final: tiempo por tarea, calidad y errores. La meta es bajar al menos 30 % el tiempo en tareas repetitivas.'],
+ ['¿Y la seguridad de la información?','En los primeros 15 días acordamos reglas simples: qué datos nunca se comparten con la IA.']
 ];
 /* Qué se puede desplegar desde el panel, por lámina */
 const GROUPS = {
@@ -231,9 +292,39 @@ function handle(event, payload){
 }
 
 /* ---------- Panel ---------- */
+function fmt(x){return Math.floor(x/60)+':'+String(x%60).padStart(2,'0')}
+let tRun=false, tEl=0, tT0=0, tIv=null;
+function tick(){
+  if(tRun) tEl = Math.floor((Date.now()-tT0)/1000);
+  const e=$('tm'); e.textContent = fmt(tEl)+' / 5:00'; e.classList.toggle('over', tEl>300);
+}
+function buildSay(box, lines){
+  lines.forEach(line=>{
+    const p=document.createElement('p');
+    line.split(/(\[\[.*?\]\]|\(\(.*?\)\))/).forEach(part=>{
+      if(!part) return;
+      let m;
+      if((m=part.match(/^\[\[(\d+):(\d+)\|(.*)\]\]$/))){
+        const g=m[1], i=+m[2], b=document.createElement('button');
+        b.textContent=m[3]; b.dataset.sg=g; b.dataset.si=i;
+        b.className = D[g][i] ? 'on' : '';
+        b.onclick=()=>toggleD(g,i); p.appendChild(b);
+      } else if((m=part.match(/^\(\((.*)\)\)$/))){
+        const sp=document.createElement('span'); sp.className='note'; sp.textContent='('+m[1]+')'; p.appendChild(sp);
+      } else p.appendChild(document.createTextNode(part));
+    });
+    box.appendChild(p);
+  });
+}
 function renderAdmin(){
+  const gd = GUIDE[cur-1];
   $('title').textContent = `Lámina ${cur} de ${N}: ${TITLES[cur-1]}`;
-  $('cue').textContent = CUES[cur-1];
+  let acum=0; for(let i=0;i<cur;i++) acum+=GUIDE[i].t;
+  $('tgt').textContent = `Esta lámina: ~${gd.t} s · Debes ir en ${fmt(acum)} al terminarla`;
+  $('cue').textContent = gd.m;
+  const say=$('say'); say.innerHTML='';
+  const tag=document.createElement('div'); tag.className='tag'; tag.textContent='Qué decir · recurso: '+gd.r; say.appendChild(tag);
+  buildSay(say, gd.say);
   document.querySelectorAll('#jump button').forEach((b,i)=>b.classList.toggle('cur', i===cur-1));
   const ctl = $('ctl'); ctl.innerHTML = '';
   const labels = GROUPS[cur];
@@ -283,6 +374,7 @@ async function tryUnlock(){
   $('gate').style.display = 'none';
   $('admin').style.display = 'flex';
   $('pin').value = '';
+  const qb=$('qabody'); qb.innerHTML=''; QA.forEach(q=>{const p=document.createElement('p'); p.innerHTML='<b></b> <span></span>'; p.children[0].textContent=q[0]; p.children[1].textContent=q[1]; qb.appendChild(p);});
   renderAdmin();
   send('detail', D);
 }
@@ -295,6 +387,12 @@ if(isAdmin){
   $('next').onclick = ()=>setRemote(cur+1);
   $('prev').onclick = ()=>setRemote(cur-1);
   $('go').onclick = tryUnlock;
+  $('tbtn').onclick = ()=>{
+    if(!tRun){ tRun=true; tT0=Date.now()-tEl*1000; tIv=setInterval(tick,500); $('tbtn').textContent='⏸ Pausar'; }
+    else { tRun=false; clearInterval(tIv); $('tbtn').textContent='▶ Seguir'; }
+    tick();
+  };
+  $('trst').onclick = ()=>{ tRun=false; clearInterval(tIv); tEl=0; $('tbtn').textContent='▶ Iniciar'; tick(); };
   $('pin').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
   setTimeout(()=>$('pin').focus(), 50);
 }
