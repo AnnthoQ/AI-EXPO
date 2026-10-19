@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI-EXPO · Presentar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supa.js"></script>
+<script src="js/drive.js"></script>
+<script src="js/pptx.js"></script>
+</head>
+<body class="viewer">
+<div id="stage"><div id="deck"></div></div>
+
+<nav id="hud" class="hidden">
+  <button type="button" id="prev" aria-label="Lámina anterior">←</button>
+  <span class="count" id="count"></span>
+  <button type="button" id="next" aria-label="Lámina siguiente">→</button>
+  <button type="button" id="fs">Pantalla completa</button>
+  <a class="btn" href="panel.html" id="exit">Salir</a>
+</nav>
+
+<div id="status">
+  <section class="box">
+    <span class="brand">AI-EXPO</span>
+    <h1 id="stTitle">Cargando…</h1>
+    <div class="bar"><i id="stBar"></i></div>
+    <p id="stText"></p>
+    <div class="row hidden" id="localPick" style="justify-content:center">
+      <label class="btn primary" style="cursor:pointer">Elegir archivo .pptx o .html
+        <input type="file" id="file" accept=".pptx,.html,.htm" class="hidden">
+      </label>
+    </div>
+    <a class="btn hidden" id="stBack" href="panel.html">Volver al panel</a>
+  </section>
+</div>
+
+<script>
+(function () {
+  const params = new URLSearchParams(location.search);
+  const $ = id => document.getElementById(id);
+  const status = $('status'), hud = $('hud'), deck = $('deck'), stage = $('stage');
+
+  function setStatus(title, text, progress) {
+    status.classList.remove('hidden');
+    $('stTitle').textContent = title;
+    $('stText').textContent = text || '';
+    $('stBar').style.width = progress == null ? '0' : Math.round(progress * 100) + '%';
+    $('stBar').parentElement.classList.toggle('hidden', progress == null);
+  }
+  function fail(msg) {
+    setStatus('No se pudo abrir', msg);
+    $('stBack').classList.remove('hidden');
+  }
+
+  // ---------- PPTX ----------
+  let doc = null, current = 0, shown = null;
+
+  function fit() {
+    if (!doc) return;
+    const s = Math.min(innerWidth / doc.width, innerHeight / doc.height);
+    deck.style.transform = `scale(${s})`;
+  }
+
+  async function go(i) {
+    if (!doc) return;
+    i = Math.max(0, Math.min(doc.count - 1, i));
+    current = i;
+    $('count').textContent = (i + 1) + ' / ' + doc.count;
+    $('prev').disabled = i === 0;
+    $('next').disabled = i === doc.count - 1;
+    let el;
+    try { el = await doc.render(i); } catch (e) { console.error(e); el = errorSlide(e); }
+    if (current !== i) return; // el usuario ya avanzó
+    if (shown) shown.remove();
+    deck.append(el);
+    shown = el;
+    if (i + 1 < doc.count) doc.render(i + 1).catch(() => {}); // precarga la siguiente
+  }
+
+  function errorSlide(e) {
+    const el = document.createElement('div');
+    Object.assign(el.style, { position: 'absolute', inset: '0', display: 'grid', placeItems: 'center', background: '#222', color: '#eee', font: '24px system-ui' });
+    el.textContent = 'No se pudo dibujar esta lámina.';
+    return el;
+  }
+
+  async function showPptx(buffer, name) {
+    setStatus('Preparando láminas…', name);
+    doc = await Pptx.open(buffer);
+    if (!doc.count) throw new Error('La presentación no tiene láminas.');
+    document.title = name + ' · AI-EXPO';
+    Object.assign(deck.style, { width: doc.width + 'px', height: doc.height + 'px' });
+    fit();
+    await go(0);
+    status.classList.add('hidden');
+    hud.classList.remove('hidden');
+    addEventListener('resize', fit);
+    addEventListener('pagehide', () => doc && doc.close());
+    addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT') return;
+      if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(current + 1); }
+      else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(current - 1); }
+      else if (e.key === 'Home') go(0);
+      else if (e.key === 'End') go(doc.count - 1);
+      else if (e.key === 'f' || e.key === 'F') toggleFs();
+    });
+    stage.addEventListener('click', e => go(current + (e.clientX < innerWidth / 3 ? -1 : 1)));
+    $('prev').onclick = () => go(current - 1);
+    $('next').onclick = () => go(current + 1);
+  }
+
+  // ---------- HTML ----------
+  // El HTML del usuario corre en un iframe aislado (sin allow-same-origin):
+  // no puede leer la sesión ni llamar a Supabase como si fuera esta app.
+  function showHtml(buffer, name) {
+    const text = new TextDecoder('utf-8').decode(buffer);
+    const frame = document.createElement('iframe');
+    frame.id = 'frame';
+    frame.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox');
+    frame.setAttribute('referrerpolicy', 'no-referrer');
+    frame.setAttribute('allow', 'fullscreen');
+    frame.title = name;
+    frame.srcdoc = text;
+    document.body.prepend(frame);
+    document.title = name + ' · AI-EXPO';
+    ['prev', 'next', 'count'].forEach(id => $(id).classList.add('hidden'));
+    status.classList.add('hidden');
+    hud.classList.remove('hidden');
+    frame.addEventListener('load', () => frame.focus());
+  }
+
+  // ---------- controles ----------
+  function toggleFs() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  }
+  $('fs').onclick = toggleFs;
+  let idle;
+  function wake() { hud.classList.remove('idle'); clearTimeout(idle); idle = setTimeout(() => hud.classList.add('idle'), 2500); }
+  addEventListener('mousemove', wake);
+  addEventListener('keydown', wake);
+  hud.addEventListener('click', e => e.stopPropagation());
+
+  async function openBuffer(buffer, kind, name) {
+    try {
+      if (kind === 'pptx') await showPptx(buffer, name);
+      else showHtml(buffer, name);
+      wake();
+    } catch (e) {
+      console.error(e);
+      fail(e.message);
+    }
+  }
+
+  // ---------- origen del archivo ----------
+  if (params.has('local')) {
+    // Modo prueba: el archivo se lee del disco del usuario, no se guarda nada.
+    $('exit').href = 'panel.html';
+    setStatus('Probar un archivo de tu PC', 'Se abre solo en esta pestaña y en memoria. No se sube a ningún lado.');
+    $('localPick').classList.remove('hidden');
+    $('file').addEventListener('change', async e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      $('localPick').classList.add('hidden');
+      const kind = /\.pptx$/i.test(f.name) ? 'pptx' : 'html';
+      openBuffer(await f.arrayBuffer(), kind, f.name);
+    });
+    window.ExpoViewer = { openBuffer };
+    return;
+  }
+
+  (async function () {
+    const id = params.get('id');
+    if (!id) return fail('Falta indicar qué presentación abrir.');
+    await Expo.requireSession();
+    setStatus('Buscando presentación…');
+    const { data, error } = await Expo.sb.from('expo_presentations')
+      .select('title,drive_file_id,kind').eq('id', id).maybeSingle();
+    if (error) return fail(error.message);
+    if (!data) return fail('No existe o no es tuya.');
+    try {
+      setStatus('Conectando con Google Drive…', data.title);
+      const meta = await Drive.getMeta(data.drive_file_id);
+      setStatus('Descargando…', data.title, 0);
+      const buffer = await Drive.download(data.drive_file_id, meta, p => setStatus('Descargando…', data.title, p));
+      await openBuffer(buffer, data.kind, data.title);
+    } catch (e) {
+      fail(e.message);
+    }
+  })();
+})();
+</script>
+</body>
+</html>

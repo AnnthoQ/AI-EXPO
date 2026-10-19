@@ -47,6 +47,29 @@ Exponer frente a un comité suele exigir un clicker, un segundo monitor o alguie
 - **Navegación por teclado:** `←` / `→` y `Espacio`.
 - **Modo local** (`?local`): funciona sin Supabase para ensayar o exponer sin conexión.
 
+## Plataforma multiusuario (`/app`)
+
+Además de la presentación fija, `app/` permite que cualquier persona use AI-EXPO con **sus propias diapositivas**:
+
+1. **Ingreso / registro** (`app/index.html`): correo y contraseña con Supabase Auth. El registro pide la contraseña dos veces.
+2. **Panel** (`app/panel.html`): el usuario pega el enlace de un archivo de Google Drive (`.pptx`, `.html` o Google Slides) compartido como *Cualquier persona con el enlace*. En Supabase solo se guarda el **ID del archivo**, no el contenido.
+3. **Visor** (`app/ver.html`): descarga el archivo con la Drive API y lo abre **en memoria** (RAM del navegador).
+   - **PPTX:** se descomprime con JSZip y cada lámina se dibuja en HTML (textos con estilos heredados, imágenes, formas, grupos, tablas). No soporta animaciones, gráficos, SmartArt ni video.
+   - **HTML:** se muestra en un `iframe` con `sandbox` (sin `allow-same-origin`), así el código subido no puede leer la sesión del usuario.
+   - **Probar un archivo de mi PC** (`ver.html?local`): abre un archivo local sin subirlo ni guardar nada.
+
+### Configuración
+
+```bash
+cp app/js/config.example.js app/js/config.js
+```
+
+- `supabaseUrl` / `supabaseAnonKey`: Supabase → Project Settings → API.
+- `googleApiKey`: Google Cloud Console → habilita **Google Drive API** → Credenciales → *Crear API key*. Restríngela a la Drive API y a los orígenes donde corre la app (por ejemplo `http://localhost:8080/*`). Esta clave queda visible en el navegador.
+- Aplica `supabase/migrations/20261019_expo_presentations.sql` (tabla `expo_presentations` con RLS: cada usuario solo ve lo suyo).
+
+Luego sirve el repositorio y abre `http://localhost:8080/app/`.
+
 ## Instalación y ejecución local
 
 ```bash
@@ -70,7 +93,14 @@ Abre `http://localhost:8080/?local` para usarla sin backend.
 
 ```
 AI-EXPO/
-├── index.html                          # App completa: láminas, estilos, guion y lógica
+├── index.html                          # Presentación fija: láminas, estilos, guion y lógica
+├── app/                                # Plataforma multiusuario
+│   ├── index.html                      # Ingreso y registro
+│   ├── panel.html                      # Mis presentaciones (IDs de Drive)
+│   ├── ver.html                        # Visor en memoria (PPTX / HTML aislado)
+│   ├── css/app.css
+│   └── js/                             # config, supa, drive, pptx (renderizador)
+├── supabase/migrations/                # SQL de la tabla expo_presentations
 ├── Presentacion_90dias_desplegada.pptx # Versión PowerPoint de la presentación
 └── TA1_PomaRoy.docx                    # Documento de la tarea asociada
 ```

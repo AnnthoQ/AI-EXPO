@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>90 días para que la IA acelere a nuestro equipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#1b1a17;--fg:#f4efe4;--mut:#a79f8d;--acc:#f2a33a;--line:#3a372f}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:var(--bg);color:var(--fg);font-family:'Bricolage Grotesque',system-ui,sans-serif;overflow:hidden}
+.slide{display:none;height:100%;padding:6vmin 8vmin;flex-direction:column;justify-content:center;gap:3vmin}
+.slide.on{display:flex}
+h1{font-size:8vmin;font-weight:800;line-height:1.05;max-width:20ch}
+h1.wide{font-size:7.2vmin;max-width:24ch}
+h2{font-size:5.6vmin;font-weight:800;line-height:1.1}
+p,li{font-size:3.4vmin;color:var(--mut);line-height:1.35}
+.acc{color:var(--acc)}
+.row{display:flex;gap:3vmin;flex-wrap:wrap}
+.card{flex:1;min-width:24vmin;border:.3vmin solid var(--line);padding:2.5vmin;border-radius:1.2vmin}
+.card b{display:block;font-size:6vmin;color:var(--acc);line-height:1.1}
+.card span{font-size:2.6vmin;color:var(--mut)}
+
+/* Desplegables: se abren desde el panel de control */
+.more{max-height:0;opacity:0;overflow:hidden;transition:max-height .45s ease,opacity .35s ease,margin .35s ease;font-size:2.5vmin;line-height:1.35;color:var(--fg)}
+[data-g].open>.more,[data-g].open .more{max-height:40vmin;opacity:1;margin-top:1.2vmin}
+.card.open{border-color:var(--acc)}
+
+/* Slide 2: pisos en acordeón */
+.floors{display:flex;flex-direction:column;gap:1vmin;width:min(110vmin,100%)}
+.floors>div{background:#26241f;border-left:1.2vmin solid var(--line);padding:1.1vmin 2vmin;font-size:2.8vmin;transition:border-color .3s,background .3s}
+.floors>div:nth-child(odd){background:#2e2b24}
+.floors>div.open{border-left-color:var(--acc)}
+.floors .more{font-size:2.4vmin;color:var(--mut)}
+.floors>div.open .more{max-height:14vmin}
+
+/* Slide 5: comparativa */
+.case{font-size:3.4vmin;color:var(--fg);max-width:44ch}
+.vs{display:flex;gap:3vmin;flex-wrap:wrap}
+.eng{flex:1;min-width:30vmin;border:.3vmin solid var(--line);border-radius:1.2vmin;padding:2.6vmin}
+.eng h3{font-size:3.4vmin;font-weight:800;color:var(--mut)}
+.eng small{display:block;font-size:2.5vmin;color:var(--mut);margin-bottom:1.6vmin}
+.eng .k{font-size:2.4vmin;color:var(--mut);margin-top:1.2vmin}
+.eng .n{font-size:8vmin;font-weight:800;line-height:1;color:var(--mut)}
+.eng .n.t{font-size:5.6vmin}
+.eng.win{border-color:var(--acc)}
+.eng.win h3,.eng.win .n{color:var(--acc)}
+
+/* Slide 6 */
+.tl{display:flex;gap:2vmin}
+.tl>div{flex:1;border-top:1vmin solid var(--acc);padding-top:1.6vmin}
+.tl b{font-size:3.6vmin;display:block}
+.tl span{font-size:2.6vmin;color:var(--mut)}
+.res{font-size:3vmin;color:var(--fg)}
+
+/* Admin */
+#admin{display:none;height:100%;padding:5vmin 6vmin;flex-direction:column;gap:2.4vmin;overflow:auto;font-size:18px}
+#admin h2{font-size:22px}#admin p{font-size:16px}
+#admin input,#admin button{font:inherit;padding:14px;border-radius:10px;border:1px solid var(--line);background:#26241f;color:var(--fg)}
+#admin .nav{display:flex;gap:12px}
+#admin .nav button{flex:1;font-size:26px;padding:22px;background:var(--acc);color:#1b1a17;font-weight:800;border:0}
+#admin .nav button.sec{background:#3a372f;color:var(--fg)}
+#admin .jump{display:flex;gap:8px;flex-wrap:wrap}
+#admin .jump button{min-width:48px}
+#admin .jump button.cur{background:var(--acc);color:#1b1a17}
+#ctl{display:flex;flex-direction:column;gap:8px}
+#ctl button{text-align:left}
+#ctl button.on{background:var(--acc);color:#1b1a17;font-weight:800;border-color:var(--acc)}
+#ctl .hint{color:var(--mut);font-size:15px}
+#cue{padding:14px;border:1px solid var(--line);border-radius:10px;color:var(--fg)}
+#st{position:fixed;right:10px;bottom:8px;font-size:12px;color:var(--mut)}
+
+/* Modal de acceso */
+#gate{display:none;position:fixed;inset:0;background:rgba(10,9,8,.88);align-items:center;justify-content:center;padding:24px;z-index:10}
+#gate .box{background:#26241f;border:1px solid var(--line);border-radius:14px;padding:28px;width:min(420px,100%);display:flex;flex-direction:column;gap:14px}
+#gate h2{font-size:22px;font-weight:800}
+#gate p{font-size:15px}
+#gate input,#gate button{font:inherit;font-size:18px;padding:14px;border-radius:10px;border:1px solid var(--line);background:#1b1a17;color:var(--fg)}
+#gate button{background:var(--acc);color:#1b1a17;font-weight:800;border:0}
+#err{color:#ff8a7a;min-height:1.2em}
+@media (max-width:640px){.tl{flex-direction:column}}
+@media (prefers-reduced-motion:reduce){.more,.floors>div{transition:none}}
+#clock{display:flex;gap:10px;align-items:center}
+#tm{font-size:34px;font-weight:800;flex:1;color:var(--acc);font-variant-numeric:tabular-nums}
+#tm.over{color:#ff8a7a}
+#tgt{color:var(--mut)}
+#say{display:flex;flex-direction:column;gap:12px;font-size:21px;line-height:1.5;color:var(--fg)}
+#say .tag{font-size:14px;color:var(--acc);font-weight:800}
+#say p{font-size:21px;color:var(--fg);line-height:1.5}
+#say .note{color:var(--acc);font-style:italic}
+#say button{padding:6px 12px;margin-right:6px;font-size:16px;background:#3a372f;color:var(--fg);border:1px solid var(--acc);border-radius:8px}
+#say button.on{background:var(--acc);color:#1b1a17;font-weight:800}
+#qa{border:1px solid var(--line);border-radius:10px;padding:12px}
+#qa summary{cursor:pointer;font-weight:800}
+#qa p{font-size:16px;margin-top:10px;color:var(--fg)}
+#qa p b{color:var(--acc)}
+</style>
+</head>
+<body>
+<div id="deck">
+  <!-- 1 -->
+  <section class="slide">
+    <h1 class="wide">90 días para que nuestro equipo resuelva en días lo que hoy toma <span class="acc">semanas</span>.</h1>
+    <p>Aprobemos el piloto de adopción de IA.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide"><h1 style="font-size:6.4vmin;max-width:26ch">Cada respuesta de IA se sostiene sobre una máquina de 7 pisos.</h1>
+    <div class="floors">
+      <div data-g="2" data-i="0">1 · Modelo<div class="more">Miles de millones de parámetros entrenados con enormes volúmenes de datos. Cada respuesta es un cálculo masivo.</div></div>
+      <div data-g="2" data-i="1">2 · Chip<div class="more">Procesadores especializados (GPU y aceleradores) que ejecutan millones de operaciones en paralelo.</div></div>
+      <div data-g="2" data-i="2">3 · Fábrica<div class="more">Muy pocas plantas en el mundo producen los chips más avanzados, y casi todas están en Taiwán.</div></div>
+      <div data-g="2" data-i="3">4 · La máquina que fabrica las máquinas<div class="more">Los equipos de litografía que imprimen esos chips los hace un único proveedor, ASML, en los Países Bajos.</div></div>
+      <div data-g="2" data-i="4">5 · Memoria<div class="more">La memoria de alto ancho de banda (HBM) va pegada al chip. Hoy es uno de los cuellos de botella del suministro.</div></div>
+      <div data-g="2" data-i="5">6 · Centro de datos<div class="more">Naves con miles de chips, redes y refrigeración operando las 24 horas.</div></div>
+      <div data-g="2" data-i="6">7 · Mundo físico: energía, cobre, agua, personas<div class="more">Electricidad, cobre para el cableado, agua para enfriar y las personas que construyen y operan todo esto.</div></div>
+    </div></section>
+
+  <!-- 3 -->
+  <section class="slide"><h2>La obra más grande de la historia</h2>
+    <div class="row">
+      <div class="card" data-g="3" data-i="0"><b>785 mil M USD</b><span>inversión de las 3 grandes tecnológicas este año</span><div class="more">Se destina a centros de datos, chips y energía. Es una apuesta de capital sin precedentes en una sola tecnología.</div></div>
+      <div class="card" data-g="3" data-i="1"><b>2,5 % vs 1,5 %</b><span>de la economía de EE. UU.: IA frente al boom de internet</span><div class="more">La IA ya pesa más en la economía estadounidense que el boom de internet en su punto más alto.</div></div>
+      <div class="card" data-g="3" data-i="2"><b>~90 %</b><span>de los chips avanzados, en una sola isla</span><div class="more">Una concentración geográfica así es un riesgo de suministro: afecta precios y plazos de todos.</div></div>
+    </div>
+    <p>Frenos: energía · memoria · materiales · personas. Ponen precio, no detienen.</p></section>
+
+  <!-- 4 (aprobada, sin cambios) -->
+  <section class="slide"><h1>Nokia tenía todo.<br><span class="acc">Reaccionó tarde.</span></h1>
+    <div class="row"><div class="card"><b>Antes</b><span>Líder mundial de móviles: marca, recursos y talento</span></div>
+    <div class="card"><b>Después</b><span>Perdió el liderazgo y vendió su negocio de móviles (2013)</span></div></div>
+    <p>No fue el tamaño. Fue adaptarse a tiempo.</p></section>
+
+  <!-- 5 -->
+  <section class="slide">
+    <p class="case">Dos ingenieros de TI reciben el mismo problema: inventario y chancado de datos.</p>
+    <div class="vs">
+      <div class="eng"><h3>Ingeniero A</h3><small>Baja adopción de IA</small>
+        <div class="k">Eficiencia con IA</div><div class="n">10 %</div>
+        <div class="k">Tiempo de solución</div><div class="n t">2 a 3 semanas</div></div>
+      <div class="eng win"><h3>Ingeniero B</h3><small>Alta adopción de IA</small>
+        <div class="k">Eficiencia con IA</div><div class="n">80 %</div>
+        <div class="k">Tiempo de solución</div><div class="n t">5 a 10 días</div></div>
+    </div>
+    <h2>¿Cuál queremos que sea nuestro equipo?</h2></section>
+
+  <!-- 6 -->
+  <section class="slide"><h2>Piloto de 90 días: tres pasos simples</h2>
+    <div class="tl">
+      <div data-g="6" data-i="0"><b>Días 1–15 · Medir y aprender</b><span>Vemos cómo trabajamos hoy y aprendemos a usar la IA con cuidado.</span><div class="more">Anotamos cuánto tarda cada tarea y cuántos errores tenemos hoy, para poder comparar después. Acordamos reglas simples: qué información nunca se comparte con la IA. Y hacemos una capacitación corta para todos.</div></div>
+      <div data-g="6" data-i="1"><b>Días 16–60 · Practicar con trabajo real</b><span>Usamos la IA en tareas de verdad, con una persona que revisa.</span><div class="more">La IA ayuda en el trabajo diario, pero una persona siempre revisa el resultado. Guardamos en una lista compartida las instrucciones (prompts) que mejor funcionan. Cada semana conversamos qué funcionó y qué no.</div></div>
+      <div data-g="6" data-i="2"><b>Días 61–90 · Comparar y decidir</b><span>Comparamos el antes y el después, y decidimos con números.</span><div class="more">Ponemos lado a lado los números del inicio y del final: tiempo, calidad y errores. Con eso decidimos juntos: seguir y ampliar, ajustar o parar.</div></div>
+    </div>
+    <p class="res">Resultados esperados: menos tiempo en tareas repetitivas · mejor calidad · menos errores · equipo con más confianza</p></section>
+
+  <!-- 7 -->
+  <section class="slide"><h1>Autoricen hoy el piloto de <span class="acc">90 días</span>.</h1>
+    <p>Meta: bajar al menos 30 % el tiempo en tareas repetitivas. Al día 90 decidimos con datos: ampliar o detener.</p>
+    <h2>La IA llegó para quedarse. Elijamos aprender.</h2></section>
+</div>
+
+<!-- Panel de control (se abre con ?admin) -->
+<div id="gate">
+  <div class="box">
+    <h2>Acceso al panel de control</h2>
+    <p>Ingresa la clave de administrador para controlar la presentación.</p>
+    <input id="pin" type="password" placeholder="Clave de acceso" autocomplete="off">
+    <div id="err"></div>
+    <button id="go">Ingresar</button>
+  </div>
+</div>
+
+<div id="admin">
+  <h2>Control remoto</h2>
+  <p id="title"></p>
+  <div id="clock"><span id="tm">0:00 / 5:00</span><button id="tbtn">▶ Iniciar</button><button id="trst">↺</button></div>
+  <p id="tgt"></p>
+  <div class="nav"><button class="sec" id="prev">◀ Anterior</button><button id="next">Siguiente ▶</button></div>
+  <div class="jump" id="jump"></div>
+  <div id="cue"></div>
+  <div id="say"></div>
+  <div id="ctl"></div>
+  <details id="qa"><summary>Preguntas probables del comité</summary><div id="qabody"></div></details>
+</div>
+<div id="st"></div>
+
+<script>
+/* ===== CONFIGURACIÓN: datos de tu proyecto Supabase ===== */
+const SUPABASE_URL = 'https://pvgdkcadqakfercyguhd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2Z2RrY2FkcWFrZmVyY3lndWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMjI4OTEsImV4cCI6MjA4ODg5ODg5MX0.6K3ei27nBJ6jVwSWskrnpYlTUAs4i3nPbbwTm1eGB9M';
+/* ======================================================== */
+
+const TITLES = ['Portada: propuesta','La máquina de 7 pisos','La magnitud','Nokia','Dos ingenieros','El piloto de 90 días','Llamado a la acción'];
+/* Guía de exposición (5:00). t = segundos objetivo de la lámina.
+   [[grupo:índice|texto]] = botón para desplegar; ((texto)) = indicación escénica */
+const GUIDE = [
+ {t:30, r:'Ethos', m:'Decir la meta sin rodeos. Voz firme, mirar al comité, no leer la pantalla.',
+  say:['Buenas tardes. Vengo a pedirles algo concreto: 90 días.',
+       'Noventa días para que nuestro equipo resuelva en días lo que hoy le toma semanas.',
+       'En los próximos cinco minutos quiero que decidan si vale la pena.']},
+ {t:40, r:'Logos', m:'La IA no es magia: es una máquina física y mundial. Abre solo el piso 4.',
+  say:['Cuando le hacemos una pregunta a la IA, parece magia. No lo es.',
+       'Detrás hay una máquina de siete pisos: el modelo, el chip, la fábrica, la máquina que fabrica las máquinas, la memoria, el centro de datos y, abajo de todo, la energía, el cobre, el agua y las personas.',
+       '[[2:3|Abrir piso 4]] Les doy un ejemplo: las máquinas que imprimen los chips más avanzados las fabrica una sola empresa, en los Países Bajos.',
+       'Una simple pregunta activa toda esta cadena en segundos.']},
+ {t:40, r:'Logos', m:'Tres cifras y los frenos en una frase. Despliega las tres tarjetas, una por una.',
+  say:['Y esta máquina se está construyendo ahora mismo.',
+       '[[3:0|Abrir 785 mil M USD]] Las tres grandes tecnológicas invierten este año unos 785 mil millones de dólares.',
+       '[[3:1|Abrir 2,5 % vs 1,5 %]] La IA ya pesa en la economía de EE. UU. más que lo que pesó el boom de internet.',
+       '[[3:2|Abrir ~90 %]] Y casi todos los chips avanzados salen de una sola isla.',
+       'Hay frenos: energía, memoria, materiales y personas. Pero esos frenos ponen precio, no detienen la obra.']},
+ {t:35, r:'Pathos', m:'Nokia: no le faltó tamaño, le faltó adaptarse a tiempo. Tono más grave.',
+  say:['Ahora, una historia. Nokia.',
+       'Líder mundial de teléfonos móviles. Tenía marca, dinero y talento.',
+       'Perdió el liderazgo y, en 2013, vendió su negocio de móviles.',
+       '¿Le faltó tamaño? No. Le faltó adaptarse a tiempo.',
+       '((pausa corta))',
+       'Eso es lo que nos puede pasar si esperamos.']},
+ {t:55, r:'Pathos + Logos', m:'Clímax: mismo problema, distinto método. Hacer 3 segundos de pausa antes de la pregunta.',
+  say:['Imaginen a dos ingenieros de TI. Les dan el mismo problema: ordenar un inventario y procesar muchísimos datos. Es un escenario para ilustrar.',
+       'El ingeniero A casi no usa la IA: la aprovecha al 10 %. Tarda de dos a tres semanas.',
+       'El ingeniero B la usa con método: la aprovecha al 80 %. Resuelve en cinco a diez días.',
+       'Mismo problema. Mismo talento. Cambia el método.',
+       '((pausa de 3 segundos mirando al comité))',
+       'Entonces, la pregunta es: ¿cuál queremos que sea nuestro equipo?']},
+ {t:55, r:'Ethos + Logos', m:'Bajar la tensión: es un paso pequeño, medible y con salida. Abre cada fase al nombrarla.',
+  say:['No les pido cambiar todo. Les pido 90 días, en tres pasos simples.',
+       '[[6:0|Abrir Días 1–15]] Primero, medir y aprender: anotamos cuánto tardamos hoy y acordamos reglas para usar la IA con cuidado.',
+       '[[6:1|Abrir Días 16–60]] Segundo, practicar con trabajo real: usamos la IA en tareas de verdad, siempre con una persona que revisa.',
+       '[[6:2|Abrir Días 61–90]] Tercero, comparar y decidir: miramos el antes y el después en tiempo, calidad y errores.',
+       'Si los números lo respaldan, ampliamos. Si no, lo detenemos. Esperamos menos tiempo en tareas repetitivas, mejor calidad, menos errores y un equipo con más confianza.']},
+ {t:35, r:'Ethos', m:'Petición concreta con meta medible. Terminar con la frase final y agradecer.',
+  say:['Mi petición es concreta: autoricen hoy el piloto de 90 días.',
+       'Nuestra meta es bajar al menos 30 % el tiempo en tareas repetitivas, sin perder calidad. En el día 90 decidimos juntos, con datos.',
+       'El riesgo es pequeño y la salida está clara.',
+       '((pausa))',
+       'La IA llegó para quedarse. Elijamos aprender. Gracias.']}
+];
+const QA = [
+ ['¿Es una moda?','La inversión mundial y el peso en la economía muestran lo contrario. Y el piloto no apuesta por la moda: apuesta por medir.'],
+ ['¿Cuánto cuesta?','Es un costo acotado y definido de antemano: herramientas y horas de capacitación, con un equipo pequeño. No hay compromiso más allá de los 90 días.'],
+ ['¿Y si sale mal?','Lo detenemos en el día 90 con datos en la mano. Además, siempre habrá una persona revisando el trabajo de la IA.'],
+ ['¿Cómo sabremos que funcionó?','Medimos al inicio y al final: tiempo por tarea, calidad y errores. La meta es bajar al menos 30 % el tiempo en tareas repetitivas.'],
+ ['¿Y la seguridad de la información?','En los primeros 15 días acordamos reglas simples: qué datos nunca se comparten con la IA.']
+];
+/* Qué se puede desplegar desde el panel, por lámina */
+const GROUPS = {
+  2:['1 · Modelo','2 · Chip','3 · Fábrica','4 · La máquina que fabrica las máquinas','5 · Memoria','6 · Centro de datos','7 · Mundo físico'],
+  3:['785 mil M USD','2,5 % vs 1,5 %','~90 % en una isla'],
+  6:['Días 1–15','Días 16–60','Días 61–90']
+};
+const ACCORDION = {2:true};
+
+const slides = [...document.querySelectorAll('.slide')];
+const N = slides.length;
+const qs = new URLSearchParams(location.search);
+const isAdmin = qs.has('admin');
+const configured = !SUPABASE_URL.includes('TU-PROYECTO');
+const forceLocal = qs.has('local') || !configured;
+let cur = 1, sb = null, ch = null, bc = null, unlocked = false, pin = '';
+const st = document.getElementById('st');
+const $ = id => document.getElementById(id);
+
+let D = {};
+for(const g in GROUPS) D[g] = GROUPS[g].map(()=>false);
+
+/* ---------- Vista ---------- */
+function show(n){
+  cur = Math.max(1, Math.min(N, n));
+  slides.forEach((s,i)=>s.classList.toggle('on', i===cur-1));
+  if(isAdmin && unlocked) renderAdmin();
+}
+function applyD(){
+  document.querySelectorAll('[data-g]').forEach(el=>{
+    const a = D[el.dataset.g];
+    el.classList.toggle('open', !!(a && a[el.dataset.i]));
+  });
+  if(isAdmin && unlocked) renderAdmin();
+}
+
+/* ---------- Mensajería (desplegables) ---------- */
+function send(event, payload){
+  if(forceLocal){ bc && bc.postMessage({event,payload}); }
+  else if(ch){ ch.send({type:'broadcast', event, payload}); }
+}
+function handle(event, payload){
+  if(event==='detail' && payload){ D = payload; applyD(); }
+  else if(event==='slide' && !isAdmin){ show(payload.n); }
+  else if(event==='hello' && isAdmin && unlocked){ send('detail', D); }
+}
+
+/* ---------- Panel ---------- */
+function fmt(x){return Math.floor(x/60)+':'+String(x%60).padStart(2,'0')}
+let tRun=false, tEl=0, tT0=0, tIv=null;
+function tick(){
+  if(tRun) tEl = Math.floor((Date.now()-tT0)/1000);
+  const e=$('tm'); e.textContent = fmt(tEl)+' / 5:00'; e.classList.toggle('over', tEl>300);
+}
+function buildSay(box, lines){
+  lines.forEach(line=>{
+    const p=document.createElement('p');
+    line.split(/(\[\[.*?\]\]|\(\(.*?\)\))/).forEach(part=>{
+      if(!part) return;
+      let m;
+      if((m=part.match(/^\[\[(\d+):(\d+)\|(.*)\]\]$/))){
+        const g=m[1], i=+m[2], b=document.createElement('button');
+        b.textContent=m[3]; b.dataset.sg=g; b.dataset.si=i;
+        b.className = D[g][i] ? 'on' : '';
+        b.onclick=()=>toggleD(g,i); p.appendChild(b);
+      } else if((m=part.match(/^\(\((.*)\)\)$/))){
+        const sp=document.createElement('span'); sp.className='note'; sp.textContent='('+m[1]+')'; p.appendChild(sp);
+      } else p.appendChild(document.createTextNode(part));
+    });
+    box.appendChild(p);
+  });
+}
+function renderAdmin(){
+  const gd = GUIDE[cur-1];
+  $('title').textContent = `Lámina ${cur} de ${N}: ${TITLES[cur-1]}`;
+  let acum=0; for(let i=0;i<cur;i++) acum+=GUIDE[i].t;
+  $('tgt').textContent = `Esta lámina: ~${gd.t} s · Debes ir en ${fmt(acum)} al terminarla`;
+  $('cue').textContent = gd.m;
+  const say=$('say'); say.innerHTML='';
+  const tag=document.createElement('div'); tag.className='tag'; tag.textContent='Qué decir · recurso: '+gd.r; say.appendChild(tag);
+  buildSay(say, gd.say);
+  document.querySelectorAll('#jump button').forEach((b,i)=>b.classList.toggle('cur', i===cur-1));
+  const ctl = $('ctl'); ctl.innerHTML = '';
+  const labels = GROUPS[cur];
+  if(!labels) return;
+  const hint = document.createElement('p'); hint.className = 'hint';
+  hint.textContent = ACCORDION[cur] ? 'Toca un piso para desplegarlo. El anterior se contrae solo.' : 'Toca una tarjeta para desplegar o contraer su detalle.';
+  ctl.appendChild(hint);
+  labels.forEach((l,i)=>{
+    const b = document.createElement('button');
+    b.textContent = l; b.className = D[cur][i] ? 'on' : '';
+    b.onclick = ()=>toggleD(cur,i);
+    ctl.appendChild(b);
+  });
+  const c = document.createElement('button');
+  c.textContent = 'Contraer todo';
+  c.onclick = ()=>{ D[cur] = D[cur].map(()=>false); applyD(); send('detail', D); };
+  ctl.appendChild(c);
+}
+function toggleD(g,i){
+  const was = D[g][i];
+  if(ACCORDION[g]) D[g] = D[g].map(()=>false);
+  D[g][i] = !was;
+  applyD(); send('detail', D);
+}
+async function setRemote(n){
+  n = Math.max(1, Math.min(N, n));
+  if(forceLocal){ show(n); send('slide',{n}); return; }
+  const { error } = await sb.rpc('set_slide', { p_pin: pin, p_slide: n });
+  st.textContent = error ? 'Error: ' + error.message : '';
+}
+async function fetchCurrent(){
+  const { data } = await sb.from('slideshow_state').select('current_slide').eq('id',1).single();
+  if(data) show(data.current_slide);
+}
+
+/* ---------- Acceso ---------- */
+async function tryUnlock(){
+  const v = $('pin').value;
+  const err = $('err');
+  if(!v){ err.textContent = 'Escribe la clave.'; return; }
+  err.textContent = 'Verificando…';
+  if(!forceLocal){
+    const { error } = await sb.rpc('set_slide', { p_pin: v, p_slide: cur });
+    if(error){ err.textContent = 'Clave incorrecta o sin conexión.'; return; }
+  }
+  pin = v; unlocked = true;
+  $('gate').style.display = 'none';
+  $('admin').style.display = 'flex';
+  $('pin').value = '';
+  const qb=$('qabody'); qb.innerHTML=''; QA.forEach(q=>{const p=document.createElement('p'); p.innerHTML='<b></b> <span></span>'; p.children[0].textContent=q[0]; p.children[1].textContent=q[1]; qb.appendChild(p);});
+  renderAdmin();
+  send('detail', D);
+}
+
+if(isAdmin){
+  $('deck').style.display = 'none';
+  $('gate').style.display = 'flex';
+  const j = $('jump');
+  for(let i=1;i<=N;i++){ const b=document.createElement('button'); b.textContent=i; b.onclick=()=>setRemote(i); j.appendChild(b); }
+  $('next').onclick = ()=>setRemote(cur+1);
+  $('prev').onclick = ()=>setRemote(cur-1);
+  $('go').onclick = tryUnlock;
+  $('tbtn').onclick = ()=>{
+    if(!tRun){ tRun=true; tT0=Date.now()-tEl*1000; tIv=setInterval(tick,500); $('tbtn').textContent='⏸ Pausar'; }
+    else { tRun=false; clearInterval(tIv); $('tbtn').textContent='▶ Seguir'; }
+    tick();
+  };
+  $('trst').onclick = ()=>{ tRun=false; clearInterval(tIv); tEl=0; $('tbtn').textContent='▶ Iniciar'; tick(); };
+  $('pin').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
+  setTimeout(()=>$('pin').focus(), 50);
+}
+
+/* ---------- Arranque ---------- */
+if(forceLocal){
+  st.textContent = configured ? 'Modo local' : 'Modo local (falta configurar Supabase)';
+  if('BroadcastChannel' in window){
+    bc = new BroadcastChannel('deck-local');
+    bc.onmessage = e => handle(e.data.event, e.data.payload);
+  }
+  if(!isAdmin) addEventListener('keydown', e=>{
+    if(e.key==='ArrowRight'||e.key===' ') show(cur+1);
+    if(e.key==='ArrowLeft') show(cur-1);
+  });
+  show(1);
+  send('hello', {});
+} else {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  show(1);
+  fetchCurrent();
+  sb.channel('slides')
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'slideshow_state' }, p => show(p.new.current_slide))
+    .subscribe(s => {
+      st.textContent = s === 'SUBSCRIBED' ? '● en vivo' : '○ reconectando…';
+      if(s === 'SUBSCRIBED') fetchCurrent();
+    });
+  ch = sb.channel('detail', { config:{ broadcast:{ self:false } } });
+  ch.on('broadcast', { event:'detail' }, m => handle('detail', m.payload))
+    .on('broadcast', { event:'hello' }, () => handle('hello'))
+    .subscribe(s => { if(s === 'SUBSCRIBED') send('hello', {}); });
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ fetchCurrent(); send('hello', {}); } });
+}
+</script>
+</body>
+</html>

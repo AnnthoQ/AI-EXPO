@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI-EXPO · Ingresar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supa.js"></script>
+</head>
+<body>
+<main class="center">
+  <!-- Inicio de sesión -->
+  <section class="box" id="login">
+    <span class="brand">AI-EXPO</span>
+    <h1>Ingresa a tus presentaciones</h1>
+    <form id="loginForm" novalidate>
+      <label>Correo
+        <input type="email" name="email" autocomplete="email" required>
+      </label>
+      <label>Contraseña
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <p class="msg" role="alert"></p>
+      <button class="primary" type="submit">Ingresar</button>
+    </form>
+    <button type="button" data-go="register">Registrarse</button>
+  </section>
+
+  <!-- Registro -->
+  <section class="box hidden" id="register">
+    <span class="brand">AI-EXPO</span>
+    <h1>Crea tu cuenta</h1>
+    <form id="registerForm" novalidate>
+      <label>Correo
+        <input type="email" name="email" autocomplete="email" required>
+      </label>
+      <label>Contraseña (mínimo 8 caracteres)
+        <input type="password" name="password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <label>Repite la contraseña
+        <input type="password" name="password2" autocomplete="new-password" minlength="8" required>
+      </label>
+      <p class="msg" role="alert"></p>
+      <button class="primary" type="submit">Crear cuenta</button>
+    </form>
+    <button type="button" class="link" data-go="login">Ya tengo cuenta</button>
+  </section>
+</main>
+
+<script>
+(async function () {
+  const { sb, authError } = window.Expo;
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // Si ya hay sesión, directo al panel.
+  const { data } = await sb.auth.getSession();
+  if (data.session) return location.replace('panel.html');
+
+  const views = { login: document.getElementById('login'), register: document.getElementById('register') };
+  function show(name) {
+    for (const [k, el] of Object.entries(views)) el.classList.toggle('hidden', k !== name);
+    views[name].querySelector('input').focus();
+  }
+  document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+
+  function setMsg(form, text, kind) {
+    const m = form.querySelector('.msg');
+    m.textContent = text;
+    m.className = 'msg' + (kind ? ' ' + kind : '');
+  }
+  function busy(form, on) { form.querySelector('button[type=submit]').disabled = on; }
+
+  document.getElementById('loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    const email = f.email.value.trim(), password = f.password.value;
+    if (!EMAIL_RE.test(email) || !password) return setMsg(f, 'Ingresa tu correo y contraseña.', 'err');
+    busy(f, true); setMsg(f, 'Ingresando…');
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    busy(f, false);
+    if (error) return setMsg(f, authError(error), 'err');
+    location.replace('panel.html');
+  });
+
+  document.getElementById('registerForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    const email = f.email.value.trim(), password = f.password.value;
+    if (!EMAIL_RE.test(email)) return setMsg(f, 'El correo no es válido.', 'err');
+    if (password.length < 8) return setMsg(f, 'La contraseña debe tener al menos 8 caracteres.', 'err');
+    if (password !== f.password2.value) return setMsg(f, 'Las contraseñas no coinciden.', 'err');
+    busy(f, true); setMsg(f, 'Creando cuenta…');
+    // Sin metadatos: el rol nunca lo decide el cliente.
+    const { data, error } = await sb.auth.signUp({ email, password });
+    busy(f, false);
+    if (error) return setMsg(f, authError(error), 'err');
+    if (data.session) return location.replace('panel.html');
+    f.reset();
+    setMsg(f, 'Cuenta creada. Revisa tu correo para confirmarla y luego ingresa.', 'ok');
+  });
+
+  show('login');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI-EXPO · Mis presentaciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supa.js"></script>
+<script src="js/drive.js"></script>
+</head>
+<body>
+<header class="top">
+  <span class="brand">AI-EXPO</span>
+  <div class="row">
+    <span class="who" id="who"></span>
+    <button type="button" id="logout">Cerrar sesión</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="add">
+    <h2>Agregar presentación</h2>
+    <div class="help">
+      Sube tu archivo <b>.pptx</b> o <b>.html</b> (o usa una presentación de Google Slides) a tu Google Drive y:
+      <ol>
+        <li>Clic derecho → <b>Compartir</b> → Acceso general: <b>Cualquier persona con el enlace</b> (Lector).</li>
+        <li>Copia el enlace y pégalo aquí. Solo guardamos el ID del archivo, no el contenido.</li>
+      </ol>
+    </div>
+    <form id="addForm" class="grid" novalidate>
+      <label>Título (opcional)
+        <input name="title" maxlength="120" placeholder="Se usa el nombre del archivo">
+      </label>
+      <label>Enlace o ID de Google Drive
+        <input name="link" required placeholder="https://drive.google.com/file/d/…">
+      </label>
+      <button class="primary" type="submit">Agregar</button>
+    </form>
+    <p class="msg" id="addMsg" role="alert"></p>
+  </section>
+
+  <section>
+    <div class="row" style="justify-content:space-between;margin-bottom:14px">
+      <h2>Mis presentaciones</h2>
+      <a class="btn" href="ver.html?local">Probar un archivo de mi PC</a>
+    </div>
+    <p class="msg" id="listMsg" role="alert"></p>
+    <ul class="list" id="list"></ul>
+  </section>
+</main>
+
+<template id="itemTpl">
+  <li class="item">
+    <h3></h3>
+    <div class="meta"><span class="tag"></span><span class="date"></span></div>
+    <div class="row">
+      <a class="btn primary present">Presentar</a>
+      <button type="button" class="danger remove">Eliminar</button>
+    </div>
+  </li>
+</template>
+
+<script>
+(async function () {
+  const { sb } = window.Expo;
+  const session = await Expo.requireSession();
+  document.getElementById('who').textContent = session.user.email;
+
+  sb.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') location.replace('index.html'); });
+  document.getElementById('logout').addEventListener('click', () => sb.auth.signOut());
+
+  const list = document.getElementById('list');
+  const listMsg = document.getElementById('listMsg');
+  const tpl = document.getElementById('itemTpl');
+  const fmt = new Intl.DateTimeFormat('es', { dateStyle: 'medium' });
+
+  async function load() {
+    const { data, error } = await sb.from('expo_presentations')
+      .select('id,title,kind,created_at').order('created_at', { ascending: false });
+    if (error) { listMsg.textContent = 'No se pudo cargar la lista: ' + error.message; listMsg.className = 'msg err'; return; }
+    listMsg.textContent = '';
+    list.replaceChildren();
+    if (!data.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = 'Todavía no agregaste presentaciones.';
+      list.append(li);
+      return;
+    }
+    for (const p of data) {
+      const node = tpl.content.firstElementChild.cloneNode(true);
+      node.querySelector('h3').textContent = p.title;
+      const tag = node.querySelector('.tag');
+      tag.textContent = p.kind;
+      tag.classList.add(p.kind);
+      node.querySelector('.date').textContent = fmt.format(new Date(p.created_at));
+      node.querySelector('.present').href = 'ver.html?id=' + encodeURIComponent(p.id);
+      node.querySelector('.remove').addEventListener('click', async () => {
+        if (!confirm('¿Quitar "' + p.title + '" de tu lista? El archivo en Drive no se borra.')) return;
+        const { error } = await sb.from('expo_presentations').delete().eq('id', p.id);
+        if (error) { listMsg.textContent = 'No se pudo eliminar: ' + error.message; listMsg.className = 'msg err'; return; }
+        load();
+      });
+      list.append(node);
+    }
+  }
+
+  const form = document.getElementById('addForm');
+  const addMsg = document.getElementById('addMsg');
+  function say(text, kind) { addMsg.textContent = text; addMsg.className = 'msg' + (kind ? ' ' + kind : ''); }
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const id = Drive.parseId(form.link.value);
+    if (!id) return say('Ese no parece un enlace de Google Drive válido.', 'err');
+    const btn = form.querySelector('button');
+    btn.disabled = true;
+    say('Verificando el archivo en Drive…');
+    try {
+      const meta = await Drive.getMeta(id);
+      const kind = Drive.kindOf(meta);
+      if (!kind) throw new Error('Solo se aceptan archivos .pptx, .html o presentaciones de Google Slides.');
+      const title = form.title.value.trim() || (meta.name || 'Presentación').replace(/\.(pptx|html?)$/i, '');
+      const { error } = await sb.from('expo_presentations')
+        .insert({ title: title.slice(0, 120), drive_file_id: id, kind });
+      if (error) throw new Error('No se pudo guardar: ' + error.message);
+      form.reset();
+      say('Agregada: ' + title, 'ok');
+      load();
+    } catch (err) {
+      say(err.message, 'err');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
